@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#164e49" />
+    <meta name="description" content="A shared youth points tracker with a live leaderboard." />
+    <title>Youth Points</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --ink: #1b2421; --teal: #164e49; --teal-tint: #e4eeec; --header-subtitle: #9fc4bf;
+        --gold: #c9962e; --gold-deep: #8a6415; --gold-tint: #f5e6c8;
+        --green: #3f9142; --green-deep: #2c6b2f; --green-tint: #e8f3e8;
+        --coral: #c1543c; --coral-deep: #93402e; --coral-tint: #fbeae6;
+        --bg: #f4f5f1; --chrome: #f1f2f0; --handle: #e2e5e2; --muted: #8a938f; --chevron: #c7ccc9;
+        --disabled: #d8dad8; --display-font: Fredoka, -apple-system, BlinkMacSystemFont, sans-serif;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-width: 320px; color: var(--ink); background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+      button, input { font: inherit; }
+      button { cursor: pointer; }
+      button:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+      .app { position: relative; width: min(100%, 448px); min-height: 100dvh; margin: 0 auto; padding-bottom: calc(98px + env(safe-area-inset-bottom, 0px)); background: var(--bg); }
+      .header { padding: calc(env(safe-area-inset-top, 0px) + 22px) 20px 20px; border-radius: 0 0 24px 24px; background: var(--teal); box-shadow: 0 4px 12px rgba(11, 48, 43, .24); }
+      h1, h2, h3, p { margin-top: 0; }
+      h1 { margin-bottom: 2px; color: #fff; font: 600 1.5rem/1.2 var(--display-font); letter-spacing: .01em; }
+      .header p { margin-bottom: 17px; color: var(--header-subtitle); font-size: .875rem; }
+      .search { display: flex; align-items: center; gap: 9px; min-height: 48px; padding: 0 12px; border-radius: 16px; background: #fff; }
+      .search svg { width: 18px; height: 18px; flex: 0 0 auto; color: var(--muted); }
+      .search input { width: 100%; min-width: 0; border: 0; outline: 0; color: var(--ink); font-size: .9rem; background: transparent; }
+      .search input::placeholder { color: var(--muted); }
+      .search:focus-within { box-shadow: 0 0 0 3px #91bdb5; }
+      .clear-search { width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; color: var(--muted); background: transparent; font-size: 1.25rem; line-height: 1; }
+      main { padding: 17px 20px 0; }
+      .leaderboard { overflow: hidden; margin-bottom: 17px; border-radius: 20px; background: #fff; box-shadow: 0 1px 4px rgba(27,36,33,.1); }
+      .leaderboard-header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 15px 16px 10px; }
+      .leaderboard-title { margin: 0; font: 600 1.1rem/1.2 var(--display-font); }
+      .live { display: flex; align-items: center; gap: 5px; color: var(--green-deep); font-size: .7rem; font-weight: 700; }
+      .live::before { width: 7px; height: 7px; content: ''; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 3px var(--green-tint); }
+      .leaderboard-list { display: grid; gap: 0; padding: 0 9px 9px; margin: 0; list-style: none; }
+      .leader { display: grid; grid-template-columns: 29px minmax(0, 1fr) auto; gap: 8px; align-items: center; min-height: 43px; padding: 4px 7px; border-radius: 11px; }
+      .leader:first-child { background: #fff8e8; }
+      .rank { display: grid; width: 25px; height: 25px; place-items: center; border-radius: 50%; color: var(--muted); background: var(--chrome); font-size: .75rem; font-weight: 700; }
+      .leader:first-child .rank { color: var(--gold-deep); background: #f8d98c; }
+      .leader-name { overflow: hidden; color: var(--ink); text-overflow: ellipsis; white-space: nowrap; font-size: .85rem; font-weight: 600; }
+      .leader-points { color: var(--gold-deep); font-size: .78rem; font-weight: 700; }
+      .leaderboard-empty { padding: 5px 16px 17px; color: var(--muted); font-size: .83rem; }
+      .section-label { margin: 0 0 9px 2px; color: var(--muted); font-size: .72rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+      .people { display: grid; gap: 8px; }
+      .person { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 12px; padding: 14px; border: 0; border-radius: 16px; color: inherit; text-align: left; background: #fff; box-shadow: 0 1px 4px rgba(27,36,33,.1); transition: transform .14s ease; }
+      .person:active, .fab:active, .amount-button:active { transform: scale(.96); }
+      .person-main { display: flex; min-width: 0; align-items: center; gap: 12px; }
+      .avatar { display: grid; width: 40px; height: 40px; flex: 0 0 auto; place-items: center; border-radius: 50%; color: var(--teal); background: var(--teal-tint); font-size: .84rem; font-weight: 700; }
+      .person-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .95rem; font-weight: 600; }
+      .person-score { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+      .points-pill { padding: 5px 10px; border-radius: 999px; color: var(--gold-deep); background: var(--gold-tint); font-size: .82rem; font-weight: 700; }
+      .chevron { color: var(--chevron); font-size: 1.25rem; }
+      .empty { padding: 35px 20px; color: var(--muted); text-align: center; font-size: .88rem; }
+      .fab { position: fixed; z-index: 4; right: max(24px, calc((100vw - 448px) / 2 + 20px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 24px); display: grid; width: 56px; height: 56px; place-items: center; border: 0; border-radius: 50%; color: #fff; background: var(--teal); box-shadow: 0 7px 16px rgba(18, 78, 73, .35); font-size: 2rem; font-weight: 300; line-height: 1; transition: transform .14s ease; }
+      .toast { position: fixed; z-index: 10; bottom: calc(env(safe-area-inset-bottom, 0px) + 92px); left: 50%; width: max-content; max-width: calc(100% - 34px); padding: 9px 15px; border-radius: 18px; color: #fff; background: var(--ink); box-shadow: 0 4px 15px rgba(0,0,0,.2); transform: translateX(-50%); font-size: .83rem; text-align: center; }
+      .overlay { position: fixed; z-index: 20; inset: 0; background: rgba(0,0,0,.4); }
+      .sheet { position: absolute; right: 0; bottom: 0; left: 0; max-width: 448px; padding: 15px 20px calc(env(safe-area-inset-bottom, 0px) + 20px); margin: 0 auto; border-radius: 24px 24px 0 0; background: #fff; box-shadow: 0 -8px 30px rgba(0,0,0,.1); }
+      .handle { width: 40px; height: 4px; margin: 0 auto 15px; border-radius: 999px; background: var(--handle); }
+      .sheet-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 15px; }
+      .sheet-heading h2 { margin: 0; font: 600 1.12rem/1.2 var(--display-font); }
+      .close { display: grid; width: 32px; height: 32px; padding: 0; place-items: center; border: 0; border-radius: 50%; color: var(--muted); background: var(--chrome); font-size: 1.35rem; line-height: 1; }
+      .field { width: 100%; min-height: 47px; padding: 0 14px; border: 0; border-radius: 16px; outline: 0; color: var(--ink); background: var(--chrome); font-size: .95rem; }
+      .field:focus { box-shadow: 0 0 0 3px var(--teal-tint); }
+      .submit { width: 100%; min-height: 47px; margin-top: 11px; border: 0; border-radius: 16px; color: #fff; background: var(--teal); font-weight: 700; }
+      .submit:disabled { color: var(--muted); background: var(--disabled); cursor: not-allowed; }
+      .person-title { margin: 0; color: var(--muted); font-size: .87rem; font-weight: 600; }
+      .points-total { display: grid; width: 112px; height: 112px; place-items: center; align-content: center; margin: 8px auto 19px; border: 3px solid var(--gold); border-radius: 50%; color: var(--gold-deep); background: var(--gold-tint); }
+      .points-total strong { font: 700 1.75rem/1 var(--display-font); }
+      .points-total span { margin-top: 5px; font-size: .75rem; font-weight: 600; }
+      .mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin-bottom: 14px; border-radius: 14px; background: var(--chrome); }
+      .mode-switch button { min-height: 38px; border: 0; border-radius: 11px; color: var(--muted); background: transparent; font-size: .86rem; font-weight: 700; }
+      .mode-switch button.selected.add { color: #fff; background: var(--green); }
+      .mode-switch button.selected.subtract { color: #fff; background: var(--coral); }
+      .amounts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+      .amount-button { min-height: 56px; border: 0; border-radius: 16px; font-size: 1.02rem; font-weight: 700; transition: transform .14s ease; }
+      .amount-button.add { color: var(--green-deep); background: var(--green-tint); }
+      .amount-button.subtract { color: var(--coral-deep); background: var(--coral-tint); }
+      .amount-button.custom { color: var(--muted); background: var(--chrome); font-size: .84rem; }
+      .custom-entry { display: flex; gap: 8px; }
+      .custom-entry .submit { width: auto; min-width: 90px; margin: 0; background: var(--green); }
+      .custom-entry .submit.subtract { background: var(--coral); }
+      .remove-person { display: block; width: 100%; min-height: 42px; margin-top: 15px; border: 0; border-radius: 14px; color: var(--coral-deep); background: var(--coral-tint); font-size: .84rem; font-weight: 700; }
+      .remove-person:hover { background: #f7d5ce; }
+      .dropdown-toggle { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; padding: 12px; margin: 0 0 9px 0; border: 0; border-radius: 14px; background: #fff; color: var(--ink); font: 600 .95rem/1.2 var(--display-font); cursor: pointer; box-shadow: 0 1px 4px rgba(27,36,33,.1); transition: background .2s ease; }
+      .dropdown-toggle:hover { background: #fafbfa; }
+      .dropdown-arrow { font-size: 1.2rem; transition: transform .2s ease; color: var(--chevron); }
+      .dropdown-arrow.open { transform: rotate(90deg); }
+      .roster-container { overflow-y: auto; max-height: 500px; transition: max-height .3s ease, opacity .2s ease; opacity: 1; }
+      .roster-container.closed { max-height: 0; overflow: hidden; opacity: 0; }
+      .activity { margin-bottom: 17px; border-radius: 20px; background: #fff; box-shadow: 0 1px 4px rgba(27,36,33,.1); overflow: hidden; }
+      .activity-header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 15px 16px 10px; }
+      .activity-title { margin: 0; font: 600 1.1rem/1.2 var(--display-font); }
+      .activity-list { display: grid; gap: 0; padding: 0 9px 9px; margin: 0; list-style: none; }
+      .activity-item { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; min-height: 40px; padding: 8px 7px; border-radius: 11px; font-size: .85rem; }
+      .activity-item:nth-child(even) { background: #fafbfa; }
+      .activity-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; color: var(--ink); }
+      .activity-change { color: var(--green-deep); font-weight: 700; flex: 0 0 auto; min-width: 50px; }
+      .activity-change.subtract { color: var(--coral-deep); }
+      .activity-empty { padding: 5px 16px 17px; color: var(--muted); font-size: .83rem; }
+      .points-activity { margin-bottom: 17px; border-radius: 20px; background: #fff; box-shadow: 0 1px 4px rgba(27,36,33,.1); overflow: hidden; }
+      .points-activity-header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 15px 16px 10px; }
+      .points-activity-title { margin: 0; font: 600 1.1rem/1.2 var(--display-font); }
+      .points-activity-list { display: grid; gap: 0; padding: 0 9px 9px; margin: 0; list-style: none; }
+      .points-entry { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; min-height: 43px; padding: 4px 7px; border-radius: 11px; }
+      .points-entry:nth-child(odd) { background: #fafbfa; }
+      .points-sign { font-weight: 700; font-size: .9rem; color: var(--green-deep); min-width: 35px; text-align: center; }
+      .points-sign.subtract { color: var(--coral-deep); }
+      .points-entry-name { overflow: hidden; color: var(--ink); text-overflow: ellipsis; white-space: nowrap; font-size: .85rem; font-weight: 600; }
+      .points-entry-amount { color: var(--gold-deep); font-size: .78rem; font-weight: 700; }
+      .points-activity-empty { padding: 5px 16px 17px; color: var(--muted); font-size: .83rem; }
+      .loading-message { padding: 15px 16px; color: var(--muted); font-size: .83rem; font-style: italic; }
+      @media (min-width: 449px) { .app { box-shadow: 0 0 30px rgba(23, 42, 36, .1); } }
+      @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header class="header">
+        <h1>Waypoints</h1>
+        <p id="personCount">Loading roster…</p>
+        <label class="search" aria-label="Search names">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="6"></circle><path d="m16 16 4 4"></path></svg>
+          <input id="search" type="search" placeholder="Search names…" autocomplete="off" />
+          <button class="clear-search" id="clearSearch" type="button" aria-label="Clear search" hidden>×</button>
+        </label>
+      </header>
+      <main>
+        <section class="leaderboard" id="leaderboardSection" aria-labelledby="leaderboardHeading">
+          <div class="leaderboard-header">
+            <h2 class="leaderboard-title" id="leaderboardHeading">Leaderboard</h2>
+            <span class="live">Live</span>
+          </div>
+          <ol class="leaderboard-list" id="leaderboardList"></ol>
+          <p class="leaderboard-empty" id="leaderboardEmpty">Add people to see the leaderboard.</p>
+        </section>
+        <section class="points-activity" id="pointsActivitySection">
+          <div class="points-activity-header">
+            <h2 class="points-activity-title">Points Added Recently</h2>
+          </div>
+          <ol class="points-activity-list" id="pointsActivityList"></ol>
+          <p class="points-activity-empty" id="pointsActivityEmpty">No recent activity yet.</p>
+        </section>
+        <button class="dropdown-toggle" id="rosterToggle" type="button"><span>Roster</span><span class="dropdown-arrow">›</span></button>
+        <div class="roster-container closed" id="rosterContainer">
+          <section class="people" id="peopleList" aria-live="polite"></section>
+        </div>
+      </main>
+    </div>
+
+    <button class="fab" id="openAdd" type="button" aria-label="Add person">+</button>
+    <div class="toast" id="toast" role="status" hidden></div>
+
+    <div class="overlay" id="addOverlay" hidden>
+      <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="addHeading">
+        <div class="handle"></div>
+        <div class="sheet-heading"><h2 id="addHeading">Add Person</h2><button class="close" data-close="add" type="button" aria-label="Close">×</button></div>
+        <form id="addForm">
+          <input class="field" id="newName" maxlength="80" placeholder="Name" autocomplete="off" required />
+          <button class="submit" id="addSubmit" type="submit">Add</button>
+        </form>
+      </section>
+    </div>
+
+    <div class="overlay" id="personOverlay" hidden>
+      <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="activeName">
+        <div class="handle"></div>
+        <div class="sheet-heading"><h2 class="person-title" id="activeName"></h2><button class="close" data-close="person" type="button" aria-label="Close">×</button></div>
+        <div class="points-total"><strong id="activePoints">0</strong><span>points</span></div>
+        <div class="mode-switch">
+          <button class="selected add" id="addMode" type="button">Add</button>
+          <button id="subtractMode" type="button">Subtract</button>
+        </div>
+        <div class="amounts" id="presetAmounts"></div>
+        <form class="custom-entry" id="customForm" hidden>
+          <input class="field" id="customAmount" type="number" inputmode="numeric" min="1" placeholder="Amount" required />
+          <button class="submit" id="applyCustom" type="submit">Apply</button>
+        </form>
+        <button class="remove-person" id="removePerson" type="button">Remove student</button>
+      </section>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js@7"></script>
+    <script>
+      // This is your public Supabase project configuration. Do not put a database password or service key here.
+      const SUPABASE_URL = 'https://kotfrrazrzjyruvszzyi.supabase.co';
+      const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_cDqaxglfzLprIxo3CSwQeQ_HImYS-97';
+      const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+      const PRESET_AMOUNTS = [10, 25, 50, 100, 150];
+      const state = { people: [], pointsActivity: [], activeId: null, mode: 'add', search: '', rosterOpen: false };
+      const $ = (selector) => document.querySelector(selector);
+      const elements = {
+        addOverlay: $('#addOverlay'), addForm: $('#addForm'), addSubmit: $('#addSubmit'), activeName: $('#activeName'), activePoints: $('#activePoints'),
+        addMode: $('#addMode'), clearSearch: $('#clearSearch'), customAmount: $('#customAmount'), customForm: $('#customForm'),
+        leaderboardEmpty: $('#leaderboardEmpty'), leaderboardList: $('#leaderboardList'), newName: $('#newName'), openAdd: $('#openAdd'),
+        peopleList: $('#peopleList'), personCount: $('#personCount'), personOverlay: $('#personOverlay'), presetAmounts: $('#presetAmounts'),
+        removePerson: $('#removePerson'), search: $('#search'), subtractMode: $('#subtractMode'), toast: $('#toast'), applyCustom: $('#applyCustom'),
+        rosterToggle: $('#rosterToggle'), rosterContainer: $('#rosterContainer'), pointsActivitySection: $('#pointsActivitySection'), pointsActivityList: $('#pointsActivityList'),
+        pointsActivityEmpty: $('#pointsActivityEmpty'), leaderboardSection: $('#leaderboardSection')
+      };
+      let toastTimer;
+      let searchFuse = null;
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+      }
+      function initials(name) { return name.trim().split(/\s+/).slice(0, 2).map((word) => word[0]?.toUpperCase() || '').join(''); }
+      function pointsLabel(points) { return `${Number(points).toLocaleString()} pts`; }
+      function activePerson() { return state.people.find((person) => person.id === state.activeId); }
+      function smartSearch(query) {
+        if (!query.trim()) return state.people;
+        const q = query.trim().toLowerCase();
+        const prefixMatches = state.people.filter(p => p.name.toLowerCase().startsWith(q));
+        const substringMatches = state.people.filter(p => p.name.toLowerCase().includes(q) && !prefixMatches.includes(p));
+        if (prefixMatches.length > 0 || substringMatches.length > 0) {
+          return [...prefixMatches, ...substringMatches];
+        }
+        if (!searchFuse) searchFuse = new Fuse(state.people, { keys: ['name'], threshold: 0.3, includeScore: true, minMatchCharLength: 1 });
+        return searchFuse.search(q).map(r => r.item);
+      }
+      function showToast(message) { clearTimeout(toastTimer); elements.toast.textContent = message; elements.toast.hidden = false; toastTimer = setTimeout(() => elements.toast.hidden = true, message.includes('SETUP.sql') ? 6000 : 1800); }
+      function databaseError(error, fallback) {
+        console.error(error);
+        if (error.code === '42P01' || error.code === 'PGRST205' || error.code === 'PGRST202') return 'Supabase setup is not finished. Run SETUP.sql in Supabase SQL Editor.';
+        if (error.code === '42501') return 'Supabase permissions are missing. Run SETUP.sql again.';
+        return error.message ? `${fallback}: ${error.message}` : fallback;
+      }
+
+      function renderHeader() {
+        const count = state.people.length;
+        elements.personCount.textContent = `${count} ${count === 1 ? 'person' : 'people'} tracked`;
+        elements.clearSearch.hidden = !state.search;
+      }
+      function renderLeaderboard() {
+        const leaders = [...state.people].sort((a, b) => b.points - a.points || a.name.localeCompare(b.name)).slice(0, 5);
+        elements.leaderboardList.replaceChildren();
+        elements.leaderboardEmpty.hidden = leaders.length > 0;
+        leaders.forEach((person, index) => {
+          const item = document.createElement('li');
+          item.className = 'leader';
+          item.innerHTML = `<span class="rank">${index + 1}</span><span class="leader-name">${escapeHtml(person.name)}</span><span class="leader-points">${pointsLabel(person.points)}</span>`;
+          elements.leaderboardList.append(item);
+        });
+      }
+      function renderRoster() {
+        const isSearching = state.search.trim().length > 0;
+        const people = isSearching ? smartSearch(state.search) : state.people;
+        
+        elements.leaderboardSection.hidden = isSearching;
+        elements.rosterToggle.hidden = isSearching;
+        
+        // Auto-expand roster when searching
+        if (isSearching && !state.rosterOpen) {
+          state.rosterOpen = true;
+          elements.rosterContainer.classList.remove('closed');
+          elements.rosterToggle.querySelector('.dropdown-arrow').classList.add('open');
+        }
+        // Auto-close roster when search is cleared
+        if (!isSearching && state.rosterOpen) {
+          state.rosterOpen = false;
+          elements.rosterContainer.classList.add('closed');
+          elements.rosterToggle.querySelector('.dropdown-arrow').classList.remove('open');
+        }
+        
+        elements.peopleList.replaceChildren();
+        if (people.length === 0) {
+          const message = state.people.length === 0 ? 'No one added yet — tap + to add your first person.' : `No matches for "${state.search}"`;
+          elements.peopleList.innerHTML = `<p class="empty">${escapeHtml(message)}</p>`;
+          return;
+        }
+        people.forEach((person) => {
+          const row = document.createElement('button');
+          row.className = 'person'; row.type = 'button'; row.dataset.id = person.id;
+          row.setAttribute('aria-label', `Edit points for ${person.name}`);
+          row.innerHTML = `<span class="person-main"><span class="avatar">${escapeHtml(initials(person.name))}</span><span class="person-name">${escapeHtml(person.name)}</span></span><span class="person-score"><span class="points-pill">${pointsLabel(person.points)}</span><span class="chevron" aria-hidden="true">›</span></span>`;
+          elements.peopleList.append(row);
+        });
+      }
+      function renderPointsActivity() {
+        const isSearching = state.search.trim().length > 0;
+        elements.pointsActivitySection.hidden = isSearching;
+        
+        elements.pointsActivityList.replaceChildren();
+        
+        if (!state.pointsActivity || state.pointsActivity.length === 0) {
+          elements.pointsActivityEmpty.textContent = 'No recent activity yet.';
+          elements.pointsActivityEmpty.hidden = false;
+          return;
+        }
+        
+        elements.pointsActivityEmpty.hidden = true;
+        state.pointsActivity.forEach((entry) => {
+          const item = document.createElement('li');
+          item.className = 'points-entry';
+          const sign = entry.amount > 0 ? '+' : '−';
+          const signClass = entry.amount > 0 ? '' : 'subtract';
+          item.innerHTML = `<span class="points-sign ${signClass}">${sign}${Math.abs(entry.amount)}</span><span class="points-entry-name">${escapeHtml(entry.name)}</span><span class="points-entry-amount">${Math.abs(entry.amount)} pts</span>`;
+          elements.pointsActivityList.append(item);
+        });
+      }
+      function renderActivePerson() {
+        const person = activePerson();
+        if (!person) return;
+        elements.activeName.textContent = person.name;
+        elements.activePoints.textContent = Number(person.points).toLocaleString();
+        elements.addMode.className = state.mode === 'add' ? 'selected add' : '';
+        elements.subtractMode.className = state.mode === 'subtract' ? 'selected subtract' : '';
+        elements.presetAmounts.replaceChildren();
+        PRESET_AMOUNTS.forEach((amount) => {
+          const button = document.createElement('button');
+          button.className = `amount-button ${state.mode}`; button.type = 'button'; button.dataset.amount = amount;
+          button.textContent = `${state.mode === 'add' ? '+' : '−'}${amount}`;
+          elements.presetAmounts.append(button);
+        });
+        const custom = document.createElement('button');
+        custom.className = 'amount-button custom'; custom.type = 'button'; custom.id = 'openCustom'; custom.textContent = 'Custom';
+        elements.presetAmounts.append(custom);
+        elements.applyCustom.className = `submit ${state.mode === 'subtract' ? 'subtract' : ''}`;
+      }
+      function render() { renderHeader(); renderLeaderboard(); renderPointsActivity(); renderRoster(); renderActivePerson(); }
+      function toggleRoster() { state.rosterOpen = !state.rosterOpen; elements.rosterContainer.classList.toggle('closed', !state.rosterOpen); elements.rosterToggle.querySelector('.dropdown-arrow').classList.toggle('open', state.rosterOpen); }
+
+      async function loadPointsActivity() {
+        elements.pointsActivityEmpty.textContent = 'Loading recent activity...';
+        elements.pointsActivityEmpty.hidden = false;
+        elements.pointsActivityList.replaceChildren();
+        
+        try {
+          console.log('Attempting to load point_changes...');
+          const { data, error } = await db.from('point_changes').select('*').order('created_at', { ascending: false }).limit(10);
+          
+          if (error) {
+            console.error('Supabase error loading point_changes:', error.message, error.code);
+            elements.pointsActivityEmpty.textContent = `Error: ${error.message}`;
+            elements.pointsActivityEmpty.hidden = false;
+            state.pointsActivity = [];
+            return;
+          }
+          
+          console.log('Point changes data received:', data);
+          state.pointsActivity = data || [];
+          
+          if (state.pointsActivity.length === 0) {
+            console.warn('No data in point_changes table');
+          }
+        } catch (err) {
+          console.error('Exception in loadPointsActivity:', err);
+          elements.pointsActivityEmpty.textContent = `Error: ${err.message}`;
+          elements.pointsActivityEmpty.hidden = false;
+          state.pointsActivity = [];
+        }
+        renderPointsActivity();
+      }
+      async function loadPeople() {
+        const { data, error } = await db.from('youth_points_people').select('id, name, points').order('name', { ascending: true });
+        if (error) { showToast(databaseError(error, 'Could not load roster')); return; }
+        state.people = data; searchFuse = null; render(); await loadPointsActivity();
+      }
+      async function addPerson(event) {
+        event.preventDefault();
+        const name = elements.newName.value.trim().replace(/\s+/g, ' ');
+        if (!name) return;
+        elements.addSubmit.disabled = true;
+        const { error } = await db.from('youth_points_people').insert({ name, points: 0 });
+        elements.addSubmit.disabled = false;
+        if (error) { showToast(error.code === '23505' ? 'That person is already on the roster.' : databaseError(error, 'Could not add that person')); return; }
+        elements.addOverlay.hidden = true; elements.addForm.reset(); showToast(`Added ${name}`); await loadPeople();
+      }
+      async function changePoints(amount) {
+        const person = activePerson();
+        if (!person || !amount) return;
+        const delta = state.mode === 'subtract' ? -amount : amount;
+        const { error } = await db.rpc('adjust_youth_points', { person_id: person.id, point_change: delta });
+        if (error) { showToast(databaseError(error, 'Could not update points')); return; }
+        const newTotal = Math.max(0, person.points + delta);
+        
+        console.log('Inserting to point_changes with data:', { 
+          person_id: typeof person.id, 
+          value: person.id, 
+          name: person.name, 
+          amount: delta 
+        });
+        
+        const insertPayload = {
+          person_id: Number(person.id),
+          name: String(person.name),
+          amount: Number(delta)
+        };
+        
+        console.log('Insert payload:', insertPayload);
+        
+        const { data: insertData, error: insertError } = await db
+          .from('point_changes')
+          .insert([insertPayload]);
+        
+        if (insertError) { 
+          console.error('Error inserting point change:', insertError.message, insertError.code, insertError.details);
+        } else {
+          console.log('Successfully inserted point change:', insertData);
+        }
+        
+        showToast(`${state.mode === 'subtract' ? '−' : '+'}${amount} · ${person.name} now has ${newTotal.toLocaleString()}`);
+        elements.customForm.hidden = true; elements.presetAmounts.hidden = false; elements.customForm.reset(); await loadPeople();
+      }
+      function openAdd() { elements.addForm.reset(); elements.addOverlay.hidden = false; setTimeout(() => elements.newName.focus(), 50); }
+      function openPerson(id) { state.activeId = id; state.mode = 'add'; elements.customForm.hidden = true; elements.presetAmounts.hidden = false; renderActivePerson(); elements.personOverlay.hidden = false; }
+      function closeOverlay(name) { if (name === 'add') elements.addOverlay.hidden = true; if (name === 'person') { elements.personOverlay.hidden = true; state.activeId = null; } }
+      async function removeActivePerson() {
+        const person = activePerson();
+        if (!person || !window.confirm(`Remove ${person.name} from the roster?`)) return;
+        const { error } = await db.from('youth_points_people').delete().eq('id', person.id);
+        if (error) { showToast(databaseError(error, 'Could not remove that student')); return; }
+        closeOverlay('person'); showToast(`Removed ${person.name}`); await loadPeople();
+      }
+
+      elements.openAdd.addEventListener('click', openAdd);
+      elements.addForm.addEventListener('submit', addPerson);
+      elements.rosterToggle.addEventListener('click', toggleRoster);
+      elements.search.addEventListener('input', (event) => { state.search = event.target.value; render(); });
+      elements.clearSearch.addEventListener('click', () => { state.search = ''; elements.search.value = ''; render(); elements.search.focus(); });
+      document.addEventListener('click', (event) => {
+        const close = event.target.closest('[data-close]'); if (close) { closeOverlay(close.dataset.close); return; }
+        if (event.target === elements.addOverlay) { closeOverlay('add'); return; }
+        if (event.target === elements.personOverlay) { closeOverlay('person'); return; }
+        const person = event.target.closest('.person'); if (person) { openPerson(person.dataset.id); return; }
+        const amount = event.target.closest('[data-amount]'); if (amount) { changePoints(Number(amount.dataset.amount)); return; }
+        if (event.target.closest('#openCustom')) { elements.presetAmounts.hidden = true; elements.customForm.hidden = false; setTimeout(() => elements.customAmount.focus(), 40); }
+      });
+      elements.addMode.addEventListener('click', () => { state.mode = 'add'; renderActivePerson(); });
+      elements.subtractMode.addEventListener('click', () => { state.mode = 'subtract'; renderActivePerson(); });
+      elements.customForm.addEventListener('submit', (event) => { event.preventDefault(); const amount = Number.parseInt(elements.customAmount.value, 10); if (Number.isFinite(amount) && amount > 0) changePoints(amount); });
+      elements.removePerson.addEventListener('click', removeActivePerson);
+      document.addEventListener('keydown', (event) => { if (event.key === 'Escape') { if (!elements.addOverlay.hidden) closeOverlay('add'); if (!elements.personOverlay.hidden) closeOverlay('person'); } });
+
+      db.channel('youth-points-live').on('postgres_changes', { event: '*', schema: 'public', table: 'youth_points_people' }, loadPeople).subscribe();
+      db.channel('point-changes-live').on('postgres_changes', { event: '*', schema: 'public', table: 'point_changes' }, loadPointsActivity).subscribe();
+      loadPeople();
+    </script>
+  </body>
+</html>
